@@ -18,7 +18,7 @@ public:
         PropForceDesktop,
     } ;
 
-    explicit JarvisConfig( const QString& viewName);
+    JarvisConfig( const QString& viewName);
 
     QVariant confProp( ConfigurationProperty p) const;
     const QString& name() const;

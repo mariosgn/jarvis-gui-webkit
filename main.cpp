@@ -31,8 +31,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    JarvisView w;
-    w.setConfig( conf );
+    JarvisView w(conf);
     w.show();
 
     return a.exec();

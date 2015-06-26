@@ -21,8 +21,7 @@ class JarvisView : public QWebView
     Q_OBJECT
 
 public:
-    JarvisView();
-    void setConfig(const JarvisConfig& config);
+    JarvisView( const JarvisConfig& config );
     bool eventFilter(QObject *o, QEvent *e);
 
 public slots:
@@ -31,10 +30,10 @@ public slots:
 protected:
     virtual void showEvent(QShowEvent * event);
 
-
 private:
     bool m_bForceX11Desktop;
     X11EventPoller* m_pX11Events;
+    const JarvisConfig& m_sConfig;
 };
 
 #endif // JARVISWIDGET_H

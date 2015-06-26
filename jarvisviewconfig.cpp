@@ -64,6 +64,7 @@ JarvisConfig::JarvisConfig(const QString &viewName):
     m_bValid = true;
 }
 
+
 QVariant JarvisConfig::confProp(JarvisConfig::ConfigurationProperty p) const
 {
     return m_mProperties[p];

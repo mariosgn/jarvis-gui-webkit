@@ -8,7 +8,9 @@
 #include <QX11Info>
 
 
-JarvisView::JarvisView():QWebView( QApplication::desktop()->screen() )
+JarvisView::JarvisView( const JarvisConfig& config ) :
+    QWebView( QApplication::desktop()->screen() ),
+    m_sConfig(config)
 {
     QPalette p = palette();
     p.setBrush(QPalette::Base, Qt::transparent);
@@ -31,24 +33,19 @@ JarvisView::JarvisView():QWebView( QApplication::desktop()->screen() )
     setWindowFlags(Qt::FramelessWindowHint|Qt::NoDropShadowWindowHint|Qt::WindowStaysOnBottomHint|Qt::X11BypassWindowManagerHint);
     setWindowTitle("jarvis-view-webkit");
 
+    load(QUrl::fromLocalFile( config.confProp(JarvisConfig::PropThemeFile).toString() ));
+    m_bForceX11Desktop = config.confProp(JarvisConfig::PropForceDesktop).toBool();
+
     m_pX11Events = new X11EventPoller();
     connect(m_pX11Events, SIGNAL(activated()), this, SLOT(toggleVisibility()));
     m_pX11Events->start();
-}
 
-void JarvisView::setConfig(const JarvisConfig &config)
-{
-    setGeometry( config.confProp(JarvisConfig::PropX).toInt(),
-                 config.confProp(JarvisConfig::PropY).toInt(),
-                 config.confProp(JarvisConfig::PropWidth).toInt(),
-                 config.confProp(JarvisConfig::PropHeight).toInt()
+    setGeometry( m_sConfig.confProp(JarvisConfig::PropX).toInt(),
+                 m_sConfig.confProp(JarvisConfig::PropY).toInt(),
+                 m_sConfig.confProp(JarvisConfig::PropWidth).toInt(),
+                 m_sConfig.confProp(JarvisConfig::PropHeight).toInt()
                  );
-
-    load(QUrl::fromLocalFile( config.confProp(JarvisConfig::PropThemeFile).toString() ));
-
-    m_bForceX11Desktop = config.confProp(JarvisConfig::PropForceDesktop).toBool();
 }
-
 
 bool JarvisView::eventFilter(QObject *, QEvent *event)
 {
@@ -69,6 +66,12 @@ bool JarvisView::eventFilter(QObject *, QEvent *event)
 #include <X11/Xutil.h>
 void JarvisView::showEvent(QShowEvent *)
 {
+    setGeometry( m_sConfig.confProp(JarvisConfig::PropX).toInt(),
+              m_sConfig.confProp(JarvisConfig::PropY).toInt(),
+              m_sConfig.confProp(JarvisConfig::PropWidth).toInt(),
+              m_sConfig.confProp(JarvisConfig::PropHeight).toInt()
+              );
+
     if ( m_bForceX11Desktop )
     {
         XLowerWindow(QX11Info::display(),  winId());
