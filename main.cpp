@@ -1,4 +1,5 @@
 #include "jarvisview.h"
+#include "jarvisviewconfig.h"
 
 #include <QApplication>
 
@@ -7,16 +8,31 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     QStringList args = a.arguments();
-    if (args.contains("--clear"))
+    if (!args.contains("--view"))
     {
-
+        qDebug() << "Error: a view name required.";
+        qDebug() << "--view viewname";
+        return 0;
     }
-    if (args.contains("--imq"))
-    {
 
+    int viewIdx = args.indexOf("--view");
+    if (args.size()<viewIdx+2)
+    {
+        qDebug() << "Error: a view name required.";
+        qDebug() << "--view viewname";
+        return 0;
+    }
+    QString view = args[++viewIdx];
+
+    JarvisConfig conf( view );
+
+    if ( !conf.isValid() )
+    {
+        return 0;
     }
 
     JarvisView w;
+    w.setConfig( conf );
     w.show();
 
     return a.exec();

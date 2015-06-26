@@ -1,9 +1,20 @@
 #ifndef JARVISWIDGET_H
 #define JARVISWIDGET_H
 
+#include "jarvisviewconfig.h"
+
 #include <QObject>
 #include <QWebView>
 #include <QWidget>
+#include <QThread>
+
+class X11EventPoller : public QThread
+{
+    Q_OBJECT
+    void run() Q_DECL_OVERRIDE ;
+signals:
+    void activated();
+};
 
 class JarvisView : public QWebView
 {
@@ -11,7 +22,19 @@ class JarvisView : public QWebView
 
 public:
     JarvisView();
+    void setConfig(const JarvisConfig& config);
+    bool eventFilter(QObject *o, QEvent *e);
 
+public slots:
+    void toggleVisibility();
+
+protected:
+    virtual void showEvent(QShowEvent * event);
+
+
+private:
+    bool m_bForceX11Desktop;
+    X11EventPoller* m_pX11Events;
 };
 
 #endif // JARVISWIDGET_H

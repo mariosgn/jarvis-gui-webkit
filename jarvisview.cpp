@@ -2,12 +2,14 @@
 #include <QWebFrame>
 #include <QWebElement>
 #include <QDebug>
+#include <QApplication>
+#include <QDesktopWidget>
+#include <QKeyEvent>
+#include <QX11Info>
 
-JarvisView::JarvisView()
+
+JarvisView::JarvisView():QWebView( QApplication::desktop()->screen() )
 {
-    setAttribute(Qt::WA_TranslucentBackground, true);
-    setWindowFlags(Qt::FramelessWindowHint|Qt::NoDropShadowWindowHint|Qt::BypassWindowManagerHint|Qt::X11BypassWindowManagerHint);
-    setWindowTitle("jarvis-view-webkit");
     QPalette p = palette();
     p.setBrush(QPalette::Base, Qt::transparent);
     page()->setPalette(p);
@@ -19,7 +21,96 @@ JarvisView::JarvisView()
     page()->mainFrame()->setScrollBarPolicy( Qt::Vertical, Qt::ScrollBarAlwaysOff );
     page()->mainFrame()->setScrollBarPolicy( Qt::Horizontal, Qt::ScrollBarAlwaysOff );
 
+    setAttribute(Qt::WA_TranslucentBackground, true);
+    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop, true);
+    setAttribute(Qt::WA_X11NetWmWindowTypeUtility, true);
+    //    setAttribute(Qt::WA_X11DoNotAcceptFocus, true);
 
-    load(QUrl::fromLocalFile("/home/mario/Dropbox/Dev/Jarvis/nodejs-test/harmattan-like-demo/index.html"));
+    installEventFilter(this);
+
+    setWindowFlags(Qt::FramelessWindowHint|Qt::NoDropShadowWindowHint|Qt::WindowStaysOnBottomHint|Qt::X11BypassWindowManagerHint);
+    setWindowTitle("jarvis-view-webkit");
+
+    m_pX11Events = new X11EventPoller();
+    connect(m_pX11Events, SIGNAL(activated()), this, SLOT(toggleVisibility()));
+    m_pX11Events->start();
 }
 
+void JarvisView::setConfig(const JarvisConfig &config)
+{
+    setGeometry( config.confProp(JarvisConfig::PropX).toInt(),
+                 config.confProp(JarvisConfig::PropY).toInt(),
+                 config.confProp(JarvisConfig::PropWidth).toInt(),
+                 config.confProp(JarvisConfig::PropHeight).toInt()
+                 );
+
+    load(QUrl::fromLocalFile( config.confProp(JarvisConfig::PropThemeFile).toString() ));
+
+    m_bForceX11Desktop = config.confProp(JarvisConfig::PropForceDesktop).toBool();
+}
+
+
+bool JarvisView::eventFilter(QObject *, QEvent *event)
+{
+    if (  event->type() == QEvent::KeyPress )
+    {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        if ( keyEvent->key() == Qt::Key_Escape)
+        {
+            hide();
+        }
+    }
+    return false;
+}
+
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xmd.h>
+#include <X11/Xutil.h>
+void JarvisView::showEvent(QShowEvent *)
+{
+    if ( m_bForceX11Desktop )
+    {
+        XLowerWindow(QX11Info::display(),  winId());
+        XReparentWindow(QX11Info::display(), winId(), QX11Info::appRootWindow(), 0, 0);
+    }
+}
+
+
+
+void JarvisView::toggleVisibility()
+{
+    setVisible(!isVisible());
+}
+
+void X11EventPoller::run()
+{
+
+    QByteArray displayName = qgetenv("DISPLAY");
+    Display *display = XOpenDisplay(displayName.constData());
+    Window root = QX11Info::appRootWindow();
+
+    XEvent xev;
+    int keycode =  XKeysymToKeycode(display,XK_F12);
+    unsigned int modifiers = ControlMask;
+
+    for( uint irrelevantBitsMask = 0; irrelevantBitsMask <= 0xff; irrelevantBitsMask++ ) {
+        XGrabKey( display, keycode, modifiers | irrelevantBitsMask, root, False, GrabModeAsync, GrabModeAsync);
+    }
+
+
+    while (666) {
+        XNextEvent(display, &xev);
+        switch(xev.type)
+        {
+        case KeyPress:
+            emit activated();
+
+        default:
+            break;
+        }
+    }
+
+    XFlush(display);
+    XCloseDisplay(display);
+}
